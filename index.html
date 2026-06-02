@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VTT Studio — Subtitle Editor &amp; Translator</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#1a1d24; --panel2:#22262f; --panel3:#2a2f3a;
+    --border:#2e333d; --text:#e6e8ec; --muted:#9aa3b2;
+    --accent:#5b8cff; --accent2:#3fd18b; --warn:#ffb454; --danger:#ff6b6b;
+    --sel:rgba(91,140,255,.22); --selb:#5b8cff;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);color:var(--text);font-size:14px;line-height:1.45;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+  button{font-family:inherit}
+  /* ---- top bar ---- */
+  header{display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--border);flex:0 0 auto;flex-wrap:wrap}
+  header .logo{font-weight:700;font-size:15px;margin-right:6px}
+  header .logo span{color:var(--accent)}
+  .btn{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:7px 12px;font-size:13px;cursor:pointer;white-space:nowrap}
+  .btn:hover{border-color:var(--accent)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  .btn.ghost{background:transparent}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .btn.sm{padding:4px 8px;font-size:12px}
+  .spacer{flex:1}
+  .pill{font-size:11px;color:var(--muted);border:1px solid var(--border);border-radius:999px;padding:2px 9px}
+  /* ---- main layout ---- */
+  main{flex:1;display:flex;min-height:0}
+  .left{width:42%;min-width:320px;display:flex;flex-direction:column;border-right:1px solid var(--border);min-height:0}
+  .right{flex:1;display:flex;flex-direction:column;min-height:0}
+  /* video */
+  .videowrap{position:relative;background:#000;flex:0 0 auto;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center}
+  video{max-width:100%;max-height:100%;width:100%;height:100%;object-fit:contain;background:#000}
+  .novideo{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;color:var(--muted);gap:8px;cursor:pointer}
+  #overlay{position:absolute;left:0;right:0;bottom:6%;text-align:center;pointer-events:none;padding:0 6%}
+  #overlay span{display:inline;background:rgba(0,0,0,.72);color:#fff;padding:3px 10px;border-radius:4px;font-size:clamp(14px,2.4vw,22px);line-height:1.4;white-space:pre-wrap}
+  .transport{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--panel);border-bottom:1px solid var(--border);flex:0 0 auto}
+  .transport .time{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12px;min-width:120px}
+  input[type=range].seek{flex:1;accent-color:var(--accent)}
+  /* tool tabs */
+  .tools{flex:1;display:flex;flex-direction:column;min-height:0;background:var(--panel)}
+  .tabs{display:flex;border-bottom:1px solid var(--border);flex:0 0 auto;overflow-x:auto}
+  .tab{padding:9px 14px;font-size:13px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+  .tab.active{color:var(--text);border-bottom-color:var(--accent)}
+  .tabpane{display:none;padding:14px;overflow:auto;flex:1}
+  .tabpane.active{display:block}
+  .grp{margin-bottom:18px}
+  .grp h4{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+  label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+  input[type=text],input[type=number],input[type=password],select,textarea{
+    width:100%;background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:7px 9px;font-size:13px;font-family:inherit}
+  textarea{resize:vertical}
+  .field{margin-bottom:10px}
+  .rowf{display:flex;gap:8px}
+  .rowf .field{flex:1;margin-bottom:10px}
+  .chk{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);margin-bottom:6px;cursor:pointer}
+  .chk input{width:auto}
+  .inline{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .hint{font-size:11px;color:var(--muted);margin-top:4px}
+  .hint.warn{color:var(--warn)}
+  /* cue table */
+  .cuehead{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--panel);border-bottom:1px solid var(--border);flex:0 0 auto;flex-wrap:wrap}
+  .cuelist{flex:1;overflow:auto;min-height:0}
+  table{width:100%;border-collapse:collapse}
+  th{position:sticky;top:0;background:var(--panel2);font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);z-index:1}
+  td{padding:4px 8px;border-bottom:1px solid var(--border);vertical-align:top;font-size:13px}
+  tr.cue{cursor:default}
+  tr.cue.sel{background:var(--sel)}
+  tr.cue.active{box-shadow:inset 3px 0 0 var(--accent2)}
+  tr.cue:hover{background:rgba(255,255,255,.03)}
+  td.idx{color:var(--muted);font-variant-numeric:tabular-nums;width:34px;text-align:right;user-select:none}
+  td.tcol{width:108px}
+  .tinput{width:100%;background:transparent;border:1px solid transparent;color:var(--text);font-variant-numeric:tabular-nums;font-size:12px;padding:3px 4px;border-radius:4px}
+  .tinput:hover{border-color:var(--border)}
+  .tinput:focus{border-color:var(--accent);background:var(--panel2);outline:none}
+  td.dur{width:56px;color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums}
+  .txtedit{width:100%;background:transparent;border:1px solid transparent;color:var(--text);font-size:13px;padding:3px 5px;border-radius:4px;resize:none;overflow:hidden;min-height:26px;font-family:inherit;line-height:1.35}
+  .txtedit:hover{border-color:var(--border)}
+  .txtedit:focus{border-color:var(--accent);background:var(--panel2);outline:none}
+  td.act{width:30px;text-align:center}
+  .xbtn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 4px;border-radius:4px}
+  .xbtn:hover{color:var(--danger);background:rgba(255,107,107,.12)}
+  .lang2{font-size:12px;color:var(--accent2);padding:3px 5px;border-top:1px dashed var(--border);margin-top:2px;display:block;white-space:pre-wrap}
+  /* timeline */
+  .timeline{flex:0 0 auto;height:120px;background:var(--panel);border-top:1px solid var(--border);display:flex;flex-direction:column}
+  .tl-bar{display:flex;align-items:center;gap:10px;padding:4px 10px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--border)}
+  .tl-scroll{flex:1;overflow-x:auto;overflow-y:hidden;position:relative}
+  .tl-track{position:relative;height:100%;min-width:100%}
+  .tl-cue{position:absolute;top:24px;height:46px;background:#34507f;border:1px solid #5b8cff;border-radius:4px;color:#dce6ff;font-size:11px;padding:3px 6px;overflow:hidden;cursor:grab;user-select:none;white-space:nowrap}
+  .tl-cue.sel{background:#3fd18b33;border-color:#3fd18b;color:#cfeede}
+  .tl-cue .h{position:absolute;top:0;bottom:0;width:7px;cursor:ew-resize}
+  .tl-cue .h.l{left:-1px} .tl-cue .h.r{right:-1px}
+  .tl-tick{position:absolute;top:0;height:18px;border-left:1px solid var(--border);color:var(--muted);font-size:9px;padding-left:3px;user-select:none}
+  .tl-play{position:absolute;top:0;bottom:0;width:2px;background:var(--accent2);pointer-events:none;z-index:5}
+  .tl-rubber{position:absolute;background:var(--sel);border:1px solid var(--selb);z-index:6;pointer-events:none}
+  /* misc */
+  .empty{padding:40px;text-align:center;color:var(--muted)}
+  .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--panel3);border:1px solid var(--border);padding:9px 16px;border-radius:8px;font-size:13px;z-index:50;opacity:0;transition:opacity .2s;pointer-events:none;max-width:80vw}
+  .toast.show{opacity:1}
+  .toast.err{border-color:var(--danger);color:#ffd0d0}
+  .toast.ok{border-color:var(--accent2)}
+  .hidden{display:none!important}
+  kbd{background:var(--panel3);border:1px solid var(--border);border-radius:4px;padding:0 5px;font-size:11px}
+  .prog{height:3px;background:var(--accent);width:0;transition:width .2s;border-radius:2px;margin-top:6px}
+  a.link{color:var(--accent);text-decoration:none}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">VTT <span>Studio</span></div>
+  <button class="btn" id="loadSub">Open subtitles</button>
+  <button class="btn" id="loadVid">Load video</button>
+  <span class="pill" id="fmtPill">no file</span>
+  <div class="spacer"></div>
+  <button class="btn sm" id="undo" title="Undo (Ctrl+Z)">↶ Undo</button>
+  <button class="btn sm" id="redo" title="Redo (Ctrl+Y)">↷ Redo</button>
+  <button class="btn" id="exportVtt">Export .vtt</button>
+  <button class="btn" id="exportSrt">Export .srt</button>
+  <input type="file" id="subFile" accept=".vtt,.srt,text/vtt" class="hidden">
+  <input type="file" id="vidFile" accept="video/*,audio/*" class="hidden">
+</header>
+
+<main>
+  <!-- LEFT: video + tools -->
+  <div class="left">
+    <div class="videowrap" id="videowrap">
+      <video id="video" playsinline></video>
+      <div class="novideo" id="novideo">
+        <div style="font-size:30px">🎬</div>
+        <div>Click to load a video / audio file</div>
+        <div style="font-size:12px">to preview captions live</div>
+      </div>
+      <div id="overlay"></div>
+    </div>
+    <div class="transport">
+      <button class="btn sm" id="playBtn">▶</button>
+      <span class="time" id="clock">00:00.000 / 00:00.000</span>
+      <input type="range" class="seek" id="seek" value="0" min="0" max="1000" step="1">
+      <select id="rate" style="width:auto" title="Playback rate">
+        <option value="0.5">0.5×</option><option value="0.75">0.75×</option>
+        <option value="1" selected>1×</option><option value="1.25">1.25×</option>
+        <option value="1.5">1.5×</option><option value="2">2×</option>
+      </select>
+    </div>
+
+    <div class="tools">
+      <div class="tabs">
+        <div class="tab active" data-tab="timing">Timing</div>
+        <div class="tab" data-tab="speed">Speed</div>
+        <div class="tab" data-tab="find">Find &amp; Replace</div>
+        <div class="tab" data-tab="translate">Translate</div>
+        <div class="tab" data-tab="help">Help</div>
+      </div>
+
+      <!-- TIMING -->
+      <div class="tabpane active" data-pane="timing">
+        <div class="grp">
+          <h4>Shift</h4>
+          <div class="rowf">
+            <div class="field"><label>Amount</label><input type="number" id="shiftAmt" value="1350" step="50"></div>
+            <div class="field" style="flex:0 0 110px"><label>Unit</label>
+              <select id="shiftUnit"><option value="1">ms</option><option value="1000">sec</option></select></div>
+          </div>
+          <div class="inline">
+            <button class="btn" id="shiftAll">Shift all</button>
+            <button class="btn" id="shiftSel">Shift selected</button>
+          </div>
+          <div class="hint">Positive = later, negative = earlier. Times clamp at 0.</div>
+        </div>
+        <div class="grp">
+          <h4>Nudge selected</h4>
+          <div class="inline">
+            <button class="btn sm" data-nudge="-100">−100ms</button>
+            <button class="btn sm" data-nudge="-40">−40ms</button>
+            <button class="btn sm" data-nudge="40">+40ms</button>
+            <button class="btn sm" data-nudge="100">+100ms</button>
+          </div>
+        </div>
+        <div class="grp">
+          <h4>Duration (selected)</h4>
+          <div class="inline" style="margin-bottom:8px">
+            <button class="btn sm" data-extend="-100">End −100ms</button>
+            <button class="btn sm" data-extend="100">End +100ms</button>
+            <button class="btn sm" data-extend="250">End +250ms</button>
+          </div>
+          <div class="rowf">
+            <div class="field"><label>Set fixed duration (ms)</label><input type="number" id="setDur" placeholder="e.g. 2000" step="100"></div>
+            <div class="field" style="flex:0 0 90px;align-self:flex-end"><button class="btn" id="applyDur" style="width:100%">Apply</button></div>
+          </div>
+          <label class="chk"><input type="checkbox" id="closeGaps"> Snap each end to next cue's start (close gaps)</label>
+          <button class="btn sm" id="doCloseGaps">Close gaps on selection</button>
+        </div>
+        <div class="grp">
+          <h4>Edit</h4>
+          <div class="inline">
+            <button class="btn sm" id="addCue">＋ Add cue</button>
+            <button class="btn sm" id="splitCue">Split at playhead</button>
+            <button class="btn sm" id="mergeCue">Merge selected</button>
+            <button class="btn sm" id="delSel">🗑 Delete selected</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SPEED -->
+      <div class="tabpane" data-pane="speed">
+        <div class="grp">
+          <h4>Re-time for playback speed change</h4>
+          <p class="hint">If the video was sped up or slowed down, scale every timestamp so captions stay in sync. Speeding the video up <b>shortens</b> times.</p>
+          <div class="field"><label>Mode</label>
+            <select id="spMode">
+              <option value="pct">Video speed changed by %</option>
+              <option value="factor">Multiply times by factor</option>
+              <option value="map">Map old → new total duration</option>
+            </select>
+          </div>
+          <div id="spPct">
+            <div class="rowf">
+              <div class="field"><label>Speed change %</label><input type="number" id="spPctVal" value="20" step="1"></div>
+              <div class="field" style="flex:0 0 120px"><label>Direction</label>
+                <select id="spDir"><option value="up">Faster</option><option value="down">Slower</option></select></div>
+            </div>
+            <div class="hint" id="spPctHint"></div>
+          </div>
+          <div id="spFactor" class="hidden">
+            <div class="field"><label>Factor (e.g. 0.8333 = 20% faster)</label><input type="number" id="spFactorVal" value="0.8333" step="0.0001"></div>
+          </div>
+          <div id="spMap" class="hidden">
+            <div class="rowf">
+              <div class="field"><label>Original duration</label><input type="text" id="spOld" placeholder="00:30:00.000"></div>
+              <div class="field"><label>New duration</label><input type="text" id="spNew" placeholder="00:25:00.000"></div>
+            </div>
+          </div>
+          <div class="field"><label>Pivot (time that stays fixed)</label><input type="text" id="spPivot" value="00:00:00.000"></div>
+          <div class="inline">
+            <button class="btn primary" id="spApplyAll">Apply to all</button>
+            <button class="btn" id="spApplySel">Apply to selected</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- FIND -->
+      <div class="tabpane" data-pane="find">
+        <div class="grp">
+          <h4>Find &amp; replace text</h4>
+          <div class="field"><label>Find</label><input type="text" id="findText" placeholder="search…"></div>
+          <div class="field"><label>Replace with</label><input type="text" id="replText" placeholder="replacement (use $1 for regex groups)"></div>
+          <label class="chk"><input type="checkbox" id="fRegex"> Regular expression</label>
+          <label class="chk"><input type="checkbox" id="fCase"> Case sensitive</label>
+          <label class="chk"><input type="checkbox" id="fWord"> Whole word</label>
+          <label class="chk"><input type="checkbox" id="fSelOnly"> Selected cues only</label>
+          <div class="inline" style="margin-top:8px">
+            <button class="btn" id="findNext">Find next</button>
+            <button class="btn" id="replOne">Replace</button>
+            <button class="btn primary" id="replAll">Replace all</button>
+          </div>
+          <div class="hint" id="findCount"></div>
+        </div>
+      </div>
+
+      <!-- TRANSLATE -->
+      <div class="tabpane" data-pane="translate">
+        <div class="grp">
+          <h4>Translate captions</h4>
+          <div class="field"><label>Provider</label>
+            <select id="prov">
+              <option value="deepl">DeepL</option>
+              <option value="ms">Microsoft Translator (Azure)</option>
+              <option value="google">Google Cloud Translation</option>
+              <option value="libre">LibreTranslate</option>
+              <option value="llm">Custom LLM (OpenAI-compatible)</option>
+            </select>
+          </div>
+          <div class="rowf">
+            <div class="field"><label>Source</label><select id="srcLang"></select></div>
+            <div class="field"><label>Target</label><select id="tgtLang"></select></div>
+          </div>
+
+          <div class="field"><label id="keyLabel">API key</label><input type="password" id="apiKey" placeholder="paste key… (stored locally only)"></div>
+          <div class="field prov-ms hidden"><label>Azure region</label><input type="text" id="msRegion" placeholder="e.g. westeurope"></div>
+          <div class="field prov-llm hidden"><label>LLM endpoint</label><input type="text" id="llmUrl" placeholder="https://api.openai.com/v1/chat/completions"></div>
+          <div class="field prov-llm hidden"><label>Model</label><input type="text" id="llmModel" placeholder="gpt-4o-mini / claude-… / llama3…"></div>
+          <div class="field prov-libre hidden"><label>LibreTranslate URL</label><input type="text" id="libreUrl" placeholder="https://libretranslate.com/translate"></div>
+
+          <div class="field"><label>CORS proxy prefix (optional)</label><input type="text" id="corsProxy" placeholder="e.g. https://corsproxy.io/?url="></div>
+          <div class="hint warn" id="provHint"></div>
+
+          <label class="chk"><input type="checkbox" id="hibPost"> Hiberno-English post-edit (LLM only): localise idiom &amp; spelling to en-IE</label>
+          <label class="chk"><input type="checkbox" id="keepOrig" checked> Keep original text (show translation underneath)</label>
+
+          <div class="inline" style="margin-top:8px">
+            <button class="btn primary" id="trAll">Translate all</button>
+            <button class="btn" id="trSel">Translate selected</button>
+            <button class="btn ghost" id="trClear">Clear translations</button>
+          </div>
+          <div class="prog" id="trProg"></div>
+          <div class="hint" id="trStatus"></div>
+        </div>
+        <div class="grp">
+          <h4>Apply translation</h4>
+          <div class="inline">
+            <button class="btn sm" id="trCommit">Replace text with translation</button>
+            <button class="btn sm" id="trExport">Export translation as new file</button>
+          </div>
+          <div class="hint">“Keep original” stores the translation alongside each cue without overwriting. Commit when happy.</div>
+        </div>
+      </div>
+
+      <!-- HELP -->
+      <div class="tabpane" data-pane="help">
+        <div class="grp">
+          <h4>Selecting</h4>
+          <p class="hint">Click a row or timeline block to select. <kbd>Shift</kbd>-click for a range, <kbd>Ctrl/⌘</kbd>-click to toggle. Drag on empty timeline to rubber-band select.</p>
+          <h4>Timeline</h4>
+          <p class="hint">Drag a block to move it (moves the whole selection together). Drag its left/right edge to retime start/end. Click the ruler to seek.</p>
+          <h4>Keys</h4>
+          <p class="hint"><kbd>Space</kbd> play/pause · <kbd>Ctrl+Z</kbd>/<kbd>Ctrl+Y</kbd> undo/redo · <kbd>Del</kbd> delete selected · <kbd>Ctrl+A</kbd> select all</p>
+          <h4>Privacy</h4>
+          <p class="hint">Everything runs in your browser. Video, subtitles and API keys never leave the page except direct calls to the translation provider you choose.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: cue table + timeline -->
+  <div class="right">
+    <div class="cuehead">
+      <label class="chk" style="margin:0"><input type="checkbox" id="selAll"> All</label>
+      <span class="pill" id="cueStat">0 cues</span>
+      <span class="pill" id="selStat">0 selected</span>
+      <div class="spacer"></div>
+      <input type="text" id="quickFilter" placeholder="filter…" style="width:160px">
+    </div>
+    <div class="cuelist" id="cuelist">
+      <div class="empty" id="emptyState">
+        Open a <b>.vtt</b> or <b>.srt</b> file to start editing.<br>
+        <button class="btn primary" id="loadSub2" style="margin-top:12px">Open subtitles</button>
+      </div>
+      <table id="cueTable" class="hidden">
+        <thead><tr><th style="width:30px"></th><th class="idx">#</th><th>Start</th><th>End</th><th>Dur</th><th>Text</th><th></th></tr></thead>
+        <tbody id="cueBody"></tbody>
+      </table>
+    </div>
+    <div class="timeline" id="timeline">
+      <div class="tl-bar">
+        <span>Timeline</span>
+        <button class="btn sm" id="zoomOut">−</button>
+        <span id="zoomLbl">10 px/s</span>
+        <button class="btn sm" id="zoomIn">＋</button>
+        <span class="spacer" style="flex:1"></span>
+        <span id="tlHint" style="font-size:11px">drag blocks to move · edges to resize</span>
+      </div>
+      <div class="tl-scroll" id="tlScroll">
+        <div class="tl-track" id="tlTrack"><div class="tl-play" id="tlPlay" style="left:0"></div></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+"use strict";
+/* =========================================================================
+   STATE
+   ========================================================================= */
+const App = {
+  cues: [],            // {id,start,end,text,settings,ident,trans}
+  format: 'vtt',
+  fileName: 'subtitles',
+  header: 'WEBVTT',
+  selection: new Set(),
+  lastClicked: null,
+  history: [], future: [],
+  nextId: 1,
+  pxPerSec: 10,
+  videoDur: 0,
+};
+const $ = id => document.getElementById(id);
+const clamp0 = n => n<0?0:n;
+
+/* =========================================================================
+   TIME HELPERS
+   ========================================================================= */
+function toMs(h,m,s,ms){return (+h)*3600000+(+m)*60000+(+s)*1000+(+ms);}
+function fmt(ms,sep){ sep=sep||'.'; ms=Math.round(ms); if(ms<0)ms=0;
+  const h=Math.floor(ms/3600000);ms%=3600000;const m=Math.floor(ms/60000);ms%=60000;
+  const s=Math.floor(ms/1000);const mil=ms%1000;
+  return p2(h)+':'+p2(m)+':'+p2(s)+sep+p3(mil);
+}
+function fmtShort(ms){ms=Math.max(0,Math.round(ms));const m=Math.floor(ms/60000);const s=Math.floor((ms%60000)/1000);const mil=ms%1000;return p2(m)+':'+p2(s)+'.'+p3(mil);}
+const p2=n=>String(n).padStart(2,'0');
+const p3=n=>String(n).padStart(3,'0');
+// flexible parse: HH:MM:SS.mmm | MM:SS.mmm | with , or .
+function parseTime(str){
+  if(typeof str!=='string')return null;
+  str=str.trim().replace(',', '.');
+  const m=str.match(/^(?:(\d+):)?(\d{1,2}):(\d{1,2})(?:\.(\d{1,3}))?$/);
+  if(!m)return null;
+  const h=m[1]?+m[1]:0, mi=+m[2], s=+m[3], ms=m[4]?+(m[4]+'00').slice(0,3):0;
+  return toMs(h,mi,s,ms);
+}
+
+/* =========================================================================
+   PARSING / SERIALISING
+   ========================================================================= */
+const RANGE=/(\d{1,2}:\d{2}:\d{2}[.,]\d{1,3}|\d{1,2}:\d{2}[.,]\d{1,3})\s*-->\s*(\d{1,2}:\d{2}:\d{2}[.,]\d{1,3}|\d{1,2}:\d{2}[.,]\d{1,3})(.*)$/;
+function loadText(text,name){
+  const isSrt=/\.srt$/i.test(name)||(/^\s*\d+\s*\r?\n\d{1,2}:\d{2}:\d{2},/.test(text));
+  App.format=isSrt?'srt':'vtt';
+  App.fileName=name.replace(/\.(vtt|srt)$/i,'')||'subtitles';
+  const lines=text.split(/\r?\n/);
+  const cues=[]; let header='WEBVTT';
+  if(/^WEBVTT/.test(lines[0]||''))header=lines[0];
+  let i=0, ident=null;
+  while(i<lines.length){
+    const line=lines[i];
+    const r=line && line.match(RANGE);
+    if(r){
+      const start=parseTime(r[1]), end=parseTime(r[2]);
+      const settings=(r[3]||'').trim();
+      // collect following text lines until blank
+      const txt=[]; i++;
+      while(i<lines.length && lines[i].trim()!==''){ txt.push(lines[i]); i++; }
+      cues.push(mkCue(start, end==null?start+2000:end, txt.join('\n'), settings, ident));
+      ident=null;
+    } else {
+      const t=line?line.trim():'';
+      // a non-empty, non-numeric line directly before a timestamp = identifier
+      if(t && !/^\d+$/.test(t) && lines[i+1] && lines[i+1].match(RANGE)) ident=t;
+      else if(/^\d+$/.test(t) && lines[i+1] && lines[i+1].match(RANGE)) ident=null; // srt index
+      i++;
+    }
+  }
+  App.header=header.startsWith('WEBVTT')?header:'WEBVTT';
+  App.cues=cues; App.selection.clear(); App.history=[]; App.future=[];
+  renderAll();
+  $('fmtPill').textContent=App.format.toUpperCase()+' · '+cues.length+' cues';
+  toast(`Loaded ${cues.length} cues`,'ok');
+}
+function mkCue(start,end,text,settings,ident){
+  return {id:App.nextId++,start,end,text:text||'',settings:settings||'',ident:ident||null,trans:null};
+}
+function toVTT(useTrans){
+  let out=(App.header||'WEBVTT')+'\n\n';
+  App.cues.forEach(c=>{
+    if(c.ident) out+=c.ident+'\n';
+    out+=fmt(c.start,'.')+' --> '+fmt(c.end,'.')+(c.settings?' '+c.settings:'')+'\n';
+    out+=(useTrans&&c.trans!=null?c.trans:c.text)+'\n\n';
+  });
+  return out.trimEnd()+'\n';
+}
+function toSRT(useTrans){
+  let out='';
+  App.cues.forEach((c,i)=>{
+    out+=(i+1)+'\n'+fmt(c.start,',')+' --> '+fmt(c.end,',')+'\n'+
+      (useTrans&&c.trans!=null?c.trans:c.text)+'\n\n';
+  });
+  return out.trimEnd()+'\n';
+}
+
+/* =========================================================================
+   HISTORY
+   ========================================================================= */
+function snapshot(){
+  App.history.push(JSON.stringify(App.cues));
+  if(App.history.length>100)App.history.shift();
+  App.future.length=0;
+  updateUndo();
+}
+function restore(json){ App.cues=JSON.parse(json); sortCues(); renderAll(); }
+function undo(){ if(!App.history.length)return; App.future.push(JSON.stringify(App.cues)); restore(App.history.pop()); updateUndo(); }
+function redo(){ if(!App.future.length)return; App.history.push(JSON.stringify(App.cues)); restore(App.future.pop()); updateUndo(); }
+function updateUndo(){ $('undo').disabled=!App.history.length; $('redo').disabled=!App.future.length; }
+function sortCues(){ App.cues.sort((a,b)=>a.start-b.start); }
+
+/* =========================================================================
+   SELECTION
+   ========================================================================= */
+function selectedCues(){ return App.cues.filter(c=>App.selection.has(c.id)); }
+function setSel(ids){ App.selection=new Set(ids); reflectSel(); }
+function clickSelect(id,e){
+  const idx=App.cues.findIndex(c=>c.id===id);
+  if(e&&e.shiftKey&&App.lastClicked!=null){
+    const j=App.cues.findIndex(c=>c.id===App.lastClicked);
+    if(j>=0){const[a,b]=[Math.min(idx,j),Math.max(idx,j)];
+      for(let k=a;k<=b;k++)App.selection.add(App.cues[k].id);}
+  }else if(e&&(e.ctrlKey||e.metaKey)){
+    App.selection.has(id)?App.selection.delete(id):App.selection.add(id);
+  }else{ App.selection=new Set([id]); }
+  App.lastClicked=id; reflectSel();
+}
+function reflectSel(){
+  document.querySelectorAll('tr.cue').forEach(tr=>tr.classList.toggle('sel',App.selection.has(+tr.dataset.id)));
+  document.querySelectorAll('.tl-cue').forEach(el=>el.classList.toggle('sel',App.selection.has(+el.dataset.id)));
+  $('selStat').textContent=App.selection.size+' selected';
+  $('selAll').checked=App.selection.size>0&&App.selection.size===App.cues.length;
+}
+
+/* =========================================================================
+   RENDER — TABLE
+   ========================================================================= */
+function renderTable(){
+  const body=$('cueBody'), tbl=$('cueTable'), empty=$('emptyState');
+  if(!App.cues.length){ tbl.classList.add('hidden'); empty.classList.remove('hidden'); $('cueStat').textContent='0 cues'; return; }
+  empty.classList.add('hidden'); tbl.classList.remove('hidden');
+  const filter=$('quickFilter').value.toLowerCase();
+  body.innerHTML='';
+  App.cues.forEach((c,i)=>{
+    if(filter && !c.text.toLowerCase().includes(filter) && !(c.trans||'').toLowerCase().includes(filter))return;
+    const tr=document.createElement('tr');
+    tr.className='cue'; tr.dataset.id=c.id;
+    tr.innerHTML=
+      `<td class="act"><input type="checkbox" class="rowsel" ${App.selection.has(c.id)?'checked':''}></td>`+
+      `<td class="idx">${i+1}</td>`+
+      `<td class="tcol"><input class="tinput" data-f="start" value="${fmt(c.start,'.')}"></td>`+
+      `<td class="tcol"><input class="tinput" data-f="end" value="${fmt(c.end,'.')}"></td>`+
+      `<td class="dur">${((c.end-c.start)/1000).toFixed(2)}s</td>`+
+      `<td><textarea class="txtedit" rows="1">${escapeHtml(c.text)}</textarea>`+
+        (c.trans!=null?`<span class="lang2">${escapeHtml(c.trans)}</span>`:'')+`</td>`+
+      `<td class="act"><button class="xbtn" title="delete">✕</button></td>`;
+    body.appendChild(tr);
+    autoSize(tr.querySelector('.txtedit'));
+  });
+  $('cueStat').textContent=App.cues.length+' cues';
+  reflectSel();
+}
+function escapeHtml(s){return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function autoSize(ta){ if(!ta)return; ta.style.height='auto'; ta.style.height=ta.scrollHeight+'px'; }
+
+/* =========================================================================
+   RENDER — TIMELINE
+   ========================================================================= */
+function totalMs(){ return Math.max(App.videoDur, App.cues.reduce((m,c)=>Math.max(m,c.end),0), 10000); }
+function renderTimeline(){
+  const track=$('tlTrack'); const pxs=App.pxPerSec;
+  const width=Math.ceil(totalMs()/1000*pxs);
+  track.style.width=width+'px';
+  // clear (keep playhead)
+  track.querySelectorAll('.tl-cue,.tl-tick').forEach(e=>e.remove());
+  // ticks every N seconds
+  const step= pxs<6?60:pxs<15?30:pxs<40?10:5;
+  for(let t=0;t<=totalMs()/1000;t+=step){
+    const d=document.createElement('div');d.className='tl-tick';d.style.left=(t*pxs)+'px';d.textContent=fmtShort(t*1000).replace(/\.\d+$/,'');
+    track.appendChild(d);
+  }
+  App.cues.forEach(c=>{
+    const el=document.createElement('div');el.className='tl-cue'+(App.selection.has(c.id)?' sel':'');
+    el.dataset.id=c.id;
+    el.style.left=(c.start/1000*pxs)+'px';
+    el.style.width=Math.max(6,(c.end-c.start)/1000*pxs)+'px';
+    el.textContent=c.text.replace(/\n/g,' ');
+    el.innerHTML='<div class="h l"></div>'+escapeHtml(c.text.replace(/\n/g,' ').slice(0,60))+'<div class="h r"></div>';
+    track.appendChild(el);
+  });
+  $('zoomLbl').textContent=pxs+' px/s';
+}
+function renderAll(){ sortCues(); renderTable(); renderTimeline(); updateUndo(); }
+
+/* =========================================================================
+   MUTATIONS
+   ========================================================================= */
+function applyShift(ms,scope){
+  snapshot();
+  (scope==='sel'?selectedCues():App.cues).forEach(c=>{c.start=clamp0(c.start+ms);c.end=clamp0(c.end+ms);});
+  renderAll();
+  toast(`Shifted ${scope==='sel'?selectedCues().length:App.cues.length} cues by ${ms}ms`);
+}
+function nudge(ms){ const s=selectedCues(); if(!s.length)return toast('Select cues first','err');
+  snapshot(); s.forEach(c=>{c.start=clamp0(c.start+ms);c.end=clamp0(c.end+ms);}); renderAll(); }
+function extendEnd(ms){ const s=selectedCues(); if(!s.length)return toast('Select cues first','err');
+  snapshot(); s.forEach(c=>{c.end=Math.max(c.start+50,c.end+ms);}); renderAll(); }
+function setDuration(ms){ const s=selectedCues(); if(!s.length)return toast('Select cues first','err');
+  snapshot(); s.forEach(c=>{c.end=c.start+ms;}); renderAll(); }
+function closeGaps(){ const s=selectedCues().length?selectedCues():App.cues; snapshot();
+  for(let i=0;i<App.cues.length-1;i++){ const c=App.cues[i],n=App.cues[i+1];
+    if(s.includes(c)) c.end=Math.max(c.start+50,n.start); }
+  renderAll(); toast('Gaps closed'); }
+function rescale(factor,pivot,scope){
+  snapshot();
+  (scope==='sel'?selectedCues():App.cues).forEach(c=>{
+    c.start=clamp0(pivot+(c.start-pivot)*factor);
+    c.end=clamp0(pivot+(c.end-pivot)*factor);
+  });
+  renderAll();
+  toast(`Rescaled ×${factor.toFixed(4)}`);
+}
+function addCueAt(t){ snapshot(); App.cues.push(mkCue(t,t+2000,'New cue','',null)); renderAll(); }
+function deleteSelected(){ const s=selectedCues(); if(!s.length)return;
+  snapshot(); const ids=new Set(s.map(c=>c.id)); App.cues=App.cues.filter(c=>!ids.has(c.id)); App.selection.clear(); renderAll(); toast(`Deleted ${s.length}`); }
+function splitAt(t){ const c=App.cues.find(c=>t>c.start+50&&t<c.end-50); if(!c)return toast('Playhead not inside a cue','err');
+  snapshot(); const b=mkCue(t,c.end,c.text,c.settings,null); c.end=t; App.cues.push(b); renderAll(); toast('Split'); }
+function mergeSelected(){ const s=selectedCues().sort((a,b)=>a.start-b.start); if(s.length<2)return toast('Select ≥2 cues','err');
+  snapshot(); const first=s[0]; first.end=s[s.length-1].end; first.text=s.map(c=>c.text).join(' ');
+  const rest=new Set(s.slice(1).map(c=>c.id)); App.cues=App.cues.filter(c=>!rest.has(c.id)); App.selection=new Set([first.id]); renderAll(); toast('Merged'); }
+
+/* =========================================================================
+   FIND / REPLACE
+   ========================================================================= */
+function buildRegex(){
+  const f=$('findText').value; if(!f)return null;
+  let pat=$('fRegex').checked?f:f.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  if($('fWord').checked)pat='\\b'+pat+'\\b';
+  try{ return new RegExp(pat,'g'+($('fCase').checked?'':'i')); }catch(e){ toast('Bad regex: '+e.message,'err'); return null; }
+}
+function findReplaceScope(){ return $('fSelOnly').checked?selectedCues():App.cues; }
+function countMatches(){ const re=buildRegex(); if(!re){$('findCount').textContent='';return;}
+  let n=0; findReplaceScope().forEach(c=>{ const m=c.text.match(re); if(m)n+=m.length; });
+  $('findCount').textContent=n+' match'+(n===1?'':'es'); }
+function replaceAll(){ const re=buildRegex(); if(!re)return; const repl=$('replText').value;
+  snapshot(); let n=0;
+  findReplaceScope().forEach(c=>{ c.text=c.text.replace(re,(...a)=>{n++;return expandRepl(repl,a);}); });
+  renderAll(); toast(`Replaced ${n}`); }
+function expandRepl(repl,args){ // args: match, g1..gn, offset, string
+  return repl.replace(/\$(\d+)/g,(_,d)=>args[+d]!==undefined?args[+d]:''); }
+
+/* =========================================================================
+   TRANSLATION
+   ========================================================================= */
+const LANGS=[
+  ['auto','Detect'],['en','English'],['en-IE','English (Ireland) — Hiberno'],['ga','Irish — Gaeilge'],
+  ['gd','Scottish Gaelic'],['cy','Welsh'],['de','German'],['fr','French'],['es','Spanish'],
+  ['it','Italian'],['pt','Portuguese'],['nl','Dutch'],['pl','Polish'],['ro','Romanian'],
+  ['sv','Swedish'],['da','Danish'],['fi','Finnish'],['cs','Czech'],['el','Greek'],
+  ['ru','Russian'],['uk','Ukrainian'],['tr','Turkish'],['ar','Arabic'],['he','Hebrew'],
+  ['hi','Hindi'],['ja','Japanese'],['ko','Korean'],['zh','Chinese (Simplified)'],['zh-TW','Chinese (Traditional)']
+];
+function fillLangs(){
+  const src=$('srcLang'),tgt=$('tgtLang');
+  LANGS.forEach(([c,n])=>{
+    src.append(new Option(n,c)); if(c!=='auto')tgt.append(new Option(n,c));
+  });
+  src.value='auto'; tgt.value='ga';
+}
+function provHint(){
+  const p=$('prov').value, t=$('tgtLang').value, h=$('provHint');
+  document.querySelectorAll('.prov-ms,.prov-llm,.prov-libre').forEach(e=>e.classList.add('hidden'));
+  if(p==='ms')document.querySelectorAll('.prov-ms').forEach(e=>e.classList.remove('hidden'));
+  if(p==='llm')document.querySelectorAll('.prov-llm').forEach(e=>e.classList.remove('hidden'));
+  if(p==='libre')document.querySelectorAll('.prov-libre').forEach(e=>e.classList.remove('hidden'));
+  let msg='';
+  if(p==='deepl'){ msg='DeepL blocks direct browser calls — set a CORS proxy prefix if it fails. DeepL has no Irish (ga).'; if(t==='ga')msg='⚠ DeepL cannot translate to Irish — use Microsoft, Google, or LLM.'; }
+  else if(p==='ms') msg='Azure Translator supports Irish (ga). Region required. Usually works direct from browser.';
+  else if(p==='google') msg='Google Cloud Translation v2 — API key in URL, works from browser. Supports ga.';
+  else if(p==='libre') msg='LibreTranslate (self-host or public). Irish support depends on the server.';
+  else if(p==='llm') msg='Any OpenAI-compatible chat endpoint. Best for Hiberno-English / nuanced phrasing.';
+  if(t==='en-IE'&&p!=='llm') msg+=' · For en-IE, MT engines fall back to English — enable the LLM Hiberno post-edit for real localisation.';
+  h.textContent=msg;
+}
+// resolve provider-specific target code; returns {code, ok, note}
+function resolveTarget(prov,code){
+  if(code==='en-IE'){
+    if(prov==='deepl')return{code:'EN-GB',ok:true};
+    return{code:'en',ok:true,note:'en-IE→en'};
+  }
+  if(prov==='deepl'){
+    if(code==='ga'||code==='gd'||code==='cy')return{code,ok:false,note:'DeepL has no '+code};
+    return{code:code.toUpperCase(),ok:true};
+  }
+  return{code,ok:true};
+}
+function srcCode(prov){ const s=$('srcLang').value; if(s==='auto')return null;
+  if(prov==='deepl')return s.toUpperCase().split('-')[0]; return s.split('-')[0]; }
+
+async function callProvider(texts){
+  const prov=$('prov').value, key=$('apiKey').value.trim();
+  const proxy=$('corsProxy').value.trim();
+  const tgt=resolveTarget(prov,$('tgtLang').value);
+  if(!tgt.ok)throw new Error(tgt.note);
+  const src=srcCode(prov);
+  const url=u=>proxy?proxy+encodeURIComponent(u):u;
+
+  if(prov==='deepl'){
+    if(!key)throw new Error('DeepL key required');
+    const base=key.endsWith(':fx')?'https://api-free.deepl.com/v2/translate':'https://api.deepl.com/v2/translate';
+    const body=new URLSearchParams();
+    texts.forEach(t=>body.append('text',t));
+    body.append('target_lang',tgt.code); if(src)body.append('source_lang',src);
+    const r=await fetch(url(base),{method:'POST',headers:{'Authorization':'DeepL-Auth-Key '+key,'Content-Type':'application/x-www-form-urlencoded'},body});
+    if(!r.ok)throw new Error('DeepL '+r.status+' '+(await r.text()).slice(0,120));
+    return (await r.json()).translations.map(t=>t.text);
+  }
+  if(prov==='ms'){
+    if(!key)throw new Error('Azure key required');
+    const region=$('msRegion').value.trim();
+    let u='https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&to='+tgt.code+(src?'&from='+src:'');
+    const r=await fetch(url(u),{method:'POST',headers:{'Ocp-Apim-Subscription-Key':key,'Ocp-Apim-Subscription-Region':region,'Content-Type':'application/json'},body:JSON.stringify(texts.map(t=>({Text:t})))});
+    if(!r.ok)throw new Error('MS '+r.status+' '+(await r.text()).slice(0,120));
+    return (await r.json()).map(o=>o.translations[0].text);
+  }
+  if(prov==='google'){
+    if(!key)throw new Error('Google API key required');
+    const u='https://translation.googleapis.com/language/translate/v2?key='+encodeURIComponent(key);
+    const r=await fetch(url(u),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({q:texts,target:tgt.code,source:src||undefined,format:'text'})});
+    if(!r.ok)throw new Error('Google '+r.status+' '+(await r.text()).slice(0,120));
+    return (await r.json()).data.translations.map(t=>decodeHtml(t.translatedText));
+  }
+  if(prov==='libre'){
+    const u=$('libreUrl').value.trim()||'https://libretranslate.com/translate';
+    const out=[];
+    for(const t of texts){
+      const r=await fetch(url(u),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({q:t,source:src||'auto',target:tgt.code,format:'text',api_key:key||undefined})});
+      if(!r.ok)throw new Error('Libre '+r.status);
+      out.push((await r.json()).translatedText);
+    }
+    return out;
+  }
+  if(prov==='llm'){
+    const u=$('llmUrl').value.trim()||'https://api.openai.com/v1/chat/completions';
+    const model=$('llmModel').value.trim()||'gpt-4o-mini';
+    const tgtName=(LANGS.find(l=>l[0]===$('tgtLang').value)||[,''])[1];
+    const hib=$('hibPost').checked||$('tgtLang').value==='en-IE';
+    const sys='You are a professional subtitle translator. Translate each numbered line into '+tgtName+
+      (hib?'. Use natural Hiberno-English (Irish English) idiom and spelling.':'.')+
+      ' Preserve line breaks within an item as \\n. Return ONLY a JSON array of strings, same length and order, no commentary.';
+    const r=await fetch(url(u),{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+      body:JSON.stringify({model,temperature:0.2,messages:[{role:'system',content:sys},{role:'user',content:JSON.stringify(texts)}]})});
+    if(!r.ok)throw new Error('LLM '+r.status+' '+(await r.text()).slice(0,120));
+    const content=(await r.json()).choices[0].message.content.trim().replace(/^```json?|```$/g,'');
+    let arr; try{arr=JSON.parse(content);}catch(e){ arr=content.split('\n').filter(Boolean); }
+    return arr;
+  }
+}
+function decodeHtml(s){const d=document.createElement('textarea');d.innerHTML=s;return d.value;}
+
+async function translate(scope){
+  const cues=scope==='sel'?selectedCues():App.cues;
+  if(!cues.length)return toast('Nothing to translate','err');
+  const prog=$('trProg'),status=$('trStatus');
+  const BATCH=$('prov').value==='libre'?1:20;
+  let done=0; status.textContent='Translating…'; prog.style.width='0';
+  try{
+    for(let i=0;i<cues.length;i+=BATCH){
+      const chunk=cues.slice(i,i+BATCH);
+      const out=await callProvider(chunk.map(c=>c.text));
+      chunk.forEach((c,k)=>{ c.trans=(out[k]!=null?out[k]:c.text); });
+      done+=chunk.length; prog.style.width=(done/cues.length*100)+'%';
+      status.textContent=`Translated ${done}/${cues.length}`;
+      renderTable();
+    }
+    status.textContent=`Done — ${done} cues. Review, then “Replace text with translation”.`;
+    toast('Translation complete','ok');
+  }catch(e){
+    status.textContent='Error: '+e.message;
+    toast('Translation failed: '+e.message,'err');
+  }
+}
+function commitTrans(){ snapshot(); let n=0; App.cues.forEach(c=>{if(c.trans!=null){c.text=c.trans;c.trans=null;n++;}}); renderAll(); toast(`Committed ${n} translations`); }
+function clearTrans(){ App.cues.forEach(c=>c.trans=null); renderTable(); }
+
+/* =========================================================================
+   VIDEO SYNC
+   ========================================================================= */
+const video=$('video');
+function curMs(){ return video.currentTime*1000; }
+video.addEventListener('loadedmetadata',()=>{ App.videoDur=video.duration*1000; $('novideo').classList.add('hidden'); renderTimeline(); $('seek').max=Math.floor(video.duration*1000); });
+video.addEventListener('timeupdate',syncVideo);
+video.addEventListener('play',()=>$('playBtn').textContent='⏸');
+video.addEventListener('pause',()=>$('playBtn').textContent='▶');
+function syncVideo(){
+  const t=curMs();
+  const active=App.cues.find(c=>t>=c.start&&t<c.end);
+  const ov=$('overlay');
+  ov.innerHTML=active?('<span>'+escapeHtml((active.trans!=null?active.trans:active.text)).replace(/\n/g,'<br>')+'</span>'):'';
+  document.querySelectorAll('tr.cue').forEach(tr=>tr.classList.toggle('active',active&&+tr.dataset.id===active.id));
+  // clock + seek
+  $('clock').textContent=fmtShort(t)+' / '+fmtShort(App.videoDur);
+  $('seek').value=Math.floor(t);
+  // playhead
+  $('tlPlay').style.left=(t/1000*App.pxPerSec)+'px';
+}
+
+/* =========================================================================
+   TIMELINE DRAG / RUBBER-BAND
+   ========================================================================= */
+let drag=null;
+$('tlTrack').addEventListener('mousedown',e=>{
+  const cue=e.target.closest('.tl-cue');
+  if(cue){
+    const id=+cue.dataset.id;
+    if(!App.selection.has(id)&&!e.shiftKey&&!e.ctrlKey&&!e.metaKey)setSel([id]);
+    else clickSelect(id,e);
+    const handle=e.target.classList.contains('h')?(e.target.classList.contains('l')?'l':'r'):null;
+    drag={mode:handle||'move',startX:e.clientX,orig:selectedCues().map(c=>({c,s:c.start,e:c.end})),id};
+    e.preventDefault();
+  } else {
+    // rubber band
+    const rect=$('tlTrack').getBoundingClientRect();
+    drag={mode:'band',x0:e.clientX-rect.left,scrollL:$('tlScroll').scrollLeft,rect,
+      box:Object.assign(document.createElement('div'),{className:'tl-rubber'})};
+    $('tlTrack').appendChild(drag.box);
+  }
+});
+window.addEventListener('mousemove',e=>{
+  if(!drag)return;
+  const dpx=e.clientX-(drag.startX||0); const dms=dpx/App.pxPerSec*1000;
+  if(drag.mode==='move'){ drag.orig.forEach(o=>{o.c.start=clamp0(o.s+dms);o.c.end=clamp0(o.e+dms);}); paintDrag(); }
+  else if(drag.mode==='l'){ drag.orig.forEach(o=>{o.c.start=clamp0(Math.min(o.e-50,o.s+dms));}); paintDrag(); }
+  else if(drag.mode==='r'){ drag.orig.forEach(o=>{o.c.end=clamp0(Math.max(o.s+50,o.e+dms));}); paintDrag(); }
+  else if(drag.mode==='band'){
+    const rect=drag.rect; const x=e.clientX-rect.left; const y=e.clientY-rect.top;
+    const L=Math.min(drag.x0,x),W=Math.abs(x-drag.x0);
+    Object.assign(drag.box.style,{left:L+'px',top:'10px',width:W+'px',height:'80px'});
+    const a=L/App.pxPerSec*1000,b=(L+W)/App.pxPerSec*1000;
+    const ids=App.cues.filter(c=>c.end>=a&&c.start<=b).map(c=>c.id);
+    setSel(ids);
+  }
+});
+window.addEventListener('mouseup',()=>{
+  if(!drag)return;
+  if(['move','l','r'].includes(drag.mode)){ // commit with history
+    // revert then snapshot then re-apply for clean undo entry
+    const moved=drag.orig.map(o=>({c:o.c,s:o.c.start,e:o.c.end}));
+    drag.orig.forEach(o=>{o.c.start=o.s;o.c.end=o.e;});
+    snapshot();
+    moved.forEach(m=>{m.c.start=m.s;m.c.end=m.e;});
+    renderAll();
+  }
+  if(drag.mode==='band'&&drag.box)drag.box.remove();
+  drag=null;
+});
+function paintDrag(){ // light update during drag (no history)
+  selectedCues().forEach(c=>{
+    const el=document.querySelector('.tl-cue[data-id="'+c.id+'"]');
+    if(el){el.style.left=(c.start/1000*App.pxPerSec)+'px';el.style.width=Math.max(6,(c.end-c.start)/1000*App.pxPerSec)+'px';}
+  });
+}
+// click ruler to seek
+$('tlScroll').addEventListener('click',e=>{
+  if(e.target.closest('.tl-cue'))return;
+  const rect=$('tlTrack').getBoundingClientRect();
+  const t=(e.clientX-rect.left)/App.pxPerSec; if(video.src)video.currentTime=Math.max(0,t);
+});
+
+/* =========================================================================
+   EVENTS — table editing
+   ========================================================================= */
+$('cueBody').addEventListener('input',e=>{
+  const tr=e.target.closest('tr.cue'); if(!tr)return; const c=App.cues.find(x=>x.id===+tr.dataset.id); if(!c)return;
+  if(e.target.classList.contains('txtedit')){ c.text=e.target.value; autoSize(e.target);
+    const t=curMs(); if(t>=c.start&&t<c.end)syncVideo(); }
+});
+$('cueBody').addEventListener('change',e=>{
+  const tr=e.target.closest('tr.cue'); if(!tr)return; const c=App.cues.find(x=>x.id===+tr.dataset.id); if(!c)return;
+  if(e.target.classList.contains('tinput')){
+    const v=parseTime(e.target.value);
+    if(v==null){ e.target.value=fmt(e.target.dataset.f==='start'?c.start:c.end,'.'); toast('Bad time format','err'); return; }
+    snapshot(); c[e.target.dataset.f]=v; if(c.end<c.start)c.end=c.start+500; renderAll();
+  }
+  if(e.target.classList.contains('rowsel')){ e.target.checked?App.selection.add(c.id):App.selection.delete(c.id); App.lastClicked=c.id; reflectSel(); }
+});
+$('cueBody').addEventListener('focusin',e=>{ if(e.target.classList.contains('txtedit'))snapshotOnce(); });
+let snapped=false; function snapshotOnce(){ if(!snapped){snapshot();snapped=true;setTimeout(()=>snapped=false,1200);} }
+$('cueBody').addEventListener('click',e=>{
+  const tr=e.target.closest('tr.cue'); if(!tr)return; const id=+tr.dataset.id;
+  if(e.target.classList.contains('xbtn')){ setSel([id]); deleteSelected(); return; }
+  if(e.target.classList.contains('idx')||e.target.tagName==='TD'&&!e.target.querySelector('input,textarea')){
+    clickSelect(id,e);
+  }
+});
+$('cueBody').addEventListener('dblclick',e=>{
+  const tr=e.target.closest('tr.cue'); if(!tr)return;
+  const c=App.cues.find(x=>x.id===+tr.dataset.id); if(c&&video.src)video.currentTime=c.start/1000;
+});
+
+/* =========================================================================
+   EVENTS — toolbar
+   ========================================================================= */
+function shiftMs(){ return (parseFloat($('shiftAmt').value)||0)*(parseInt($('shiftUnit').value)||1); }
+$('shiftAll').onclick=()=>applyShift(shiftMs(),'all');
+$('shiftSel').onclick=()=>{ if(!App.selection.size)return toast('Select cues first','err'); applyShift(shiftMs(),'sel'); };
+document.querySelectorAll('[data-nudge]').forEach(b=>b.onclick=()=>nudge(+b.dataset.nudge));
+document.querySelectorAll('[data-extend]').forEach(b=>b.onclick=()=>extendEnd(+b.dataset.extend));
+$('applyDur').onclick=()=>{ const v=parseInt($('setDur').value); if(!v)return toast('Enter a duration','err'); setDuration(v); };
+$('doCloseGaps').onclick=closeGaps;
+$('addCue').onclick=()=>addCueAt(Math.round(curMs()));
+$('splitCue').onclick=()=>splitAt(Math.round(curMs()));
+$('mergeCue').onclick=mergeSelected;
+$('delSel').onclick=deleteSelected;
+
+// speed pane
+function updSpeedMode(){ const m=$('spMode').value;
+  $('spPct').classList.toggle('hidden',m!=='pct');
+  $('spFactor').classList.toggle('hidden',m!=='factor');
+  $('spMap').classList.toggle('hidden',m!=='map');
+  updSpHint(); }
+function updSpHint(){ const p=parseFloat($('spPctVal').value)||0; const up=$('spDir').value==='up';
+  const f=up?1/(1+p/100):1+p/100; $('spPctHint').textContent='→ multiply all times by '+f.toFixed(4); }
+function computeFactor(){ const m=$('spMode').value;
+  if(m==='factor')return parseFloat($('spFactorVal').value)||1;
+  if(m==='map'){ const o=parseTime($('spOld').value),n=parseTime($('spNew').value); if(!o||!n)return null; return n/o; }
+  const p=parseFloat($('spPctVal').value)||0; return $('spDir').value==='up'?1/(1+p/100):1+p/100;
+}
+$('spMode').onchange=updSpeedMode;
+$('spPctVal').oninput=updSpHint; $('spDir').onchange=updSpHint;
+$('spApplyAll').onclick=()=>{ const f=computeFactor(); if(f==null)return toast('Check inputs','err'); rescale(f,parseTime($('spPivot').value)||0,'all'); };
+$('spApplySel').onclick=()=>{ if(!App.selection.size)return toast('Select cues first','err'); const f=computeFactor(); if(f==null)return toast('Check inputs','err'); rescale(f,parseTime($('spPivot').value)||0,'sel'); };
+
+// find
+['findText','replText','fRegex','fCase','fWord','fSelOnly'].forEach(id=>$(id).addEventListener('input',countMatches));
+$('replAll').onclick=replaceAll;
+$('replOne').onclick=()=>{ const re=buildRegex(); if(!re)return; for(const c of findReplaceScope()){ if(re.test(c.text)){ snapshot(); c.text=c.text.replace(re,(...a)=>expandRepl($('replText').value,a)); renderAll(); break; } } };
+$('findNext').onclick=()=>{ const re=buildRegex(); if(!re)return; const c=findReplaceScope().find(c=>re.test(c.text)); if(c){ setSel([c.id]); const tr=document.querySelector('tr.cue[data-id="'+c.id+'"]'); if(tr)tr.scrollIntoView({block:'center'}); } else toast('No match','err'); };
+
+// translate
+$('prov').onchange=provHint; $('tgtLang').onchange=provHint;
+$('trAll').onclick=()=>translate('all');
+$('trSel').onclick=()=>{ if(!App.selection.size)return toast('Select cues first','err'); translate('sel'); };
+$('trClear').onclick=clearTrans;
+$('trCommit').onclick=commitTrans;
+$('trExport').onclick=()=>download(App.format==='srt'?toSRT(true):toVTT(true),App.fileName+'.'+$('tgtLang').value+'.'+App.format);
+
+// file IO
+$('loadSub').onclick=()=>$('subFile').click();
+if($('loadSub2'))$('loadSub2').onclick=()=>$('subFile').click();
+$('loadVid').onclick=()=>$('vidFile').click();
+$('novideo').onclick=()=>$('vidFile').click();
+$('subFile').onchange=e=>{ const f=e.target.files[0]; if(!f)return; const r=new FileReader(); r.onload=()=>loadText(r.result,f.name); r.readAsText(f,'utf-8'); };
+$('vidFile').onchange=e=>{ const f=e.target.files[0]; if(!f)return; video.src=URL.createObjectURL(f); toast('Video loaded','ok'); };
+$('exportVtt').onclick=()=>download(toVTT(false),App.fileName+'.vtt');
+$('exportSrt').onclick=()=>download(toSRT(false),App.fileName+'.srt');
+function download(text,name){ const b=new Blob([text],{type:'text/plain;charset=utf-8'}); const u=URL.createObjectURL(b); const a=document.createElement('a'); a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(u); }
+
+// transport
+$('playBtn').onclick=()=>{ if(!video.src)return $('vidFile').click(); video.paused?video.play():video.pause(); };
+$('seek').oninput=e=>{ if(video.src)video.currentTime=+e.target.value/1000; };
+$('rate').onchange=e=>video.playbackRate=+e.target.value;
+
+// header
+$('undo').onclick=undo; $('redo').onclick=redo;
+
+// zoom
+$('zoomIn').onclick=()=>{ App.pxPerSec=Math.min(200,App.pxPerSec*1.5); renderTimeline(); };
+$('zoomOut').onclick=()=>{ App.pxPerSec=Math.max(2,App.pxPerSec/1.5); renderTimeline(); };
+
+// select all / filter
+$('selAll').onchange=e=>{ setSel(e.target.checked?App.cues.map(c=>c.id):[]); };
+$('quickFilter').oninput=renderTable;
+
+// tabs
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.tabpane').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active'); document.querySelector('.tabpane[data-pane="'+t.dataset.tab+'"]').classList.add('active');
+});
+
+// keyboard
+document.addEventListener('keydown',e=>{
+  const typing=/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
+  if((e.ctrlKey||e.metaKey)&&e.key==='z'){ e.preventDefault(); undo(); return; }
+  if((e.ctrlKey||e.metaKey)&&(e.key==='y'||(e.shiftKey&&e.key==='z'))){ e.preventDefault(); redo(); return; }
+  if(typing)return;
+  if(e.key===' '){ e.preventDefault(); if(video.src){video.paused?video.play():video.pause();} }
+  else if(e.key==='Delete'||e.key==='Backspace'){ e.preventDefault(); deleteSelected(); }
+  else if((e.ctrlKey||e.metaKey)&&e.key==='a'){ e.preventDefault(); setSel(App.cues.map(c=>c.id)); }
+});
+
+/* =========================================================================
+   TOAST + INIT
+   ========================================================================= */
+let toTimer; function toast(msg,kind){ const t=$('toast'); t.textContent=msg; t.className='toast show'+(kind?' '+kind:''); clearTimeout(toTimer); toTimer=setTimeout(()=>t.className='toast',2600); }
+fillLangs(); provHint(); updSpeedMode(); updateUndo();
+})();
+</script>
+</body>
+</html>
