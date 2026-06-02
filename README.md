@@ -2,7 +2,7 @@
 
 A browser-based **subtitle editor + translator** for WebVTT (`.vtt`) and SubRip (`.srt`) files. Single static HTML file — no build, no server, no dependencies. Everything runs in your browser; subtitles, video and API keys never leave the page except for the translation provider you choose.
 
-**▶ Live app:** _enable GitHub Pages, then the URL appears here_
+**▶ Live app: <https://cobblestonelearning.github.io/subtitle-studio/>**
 
 ## Features
 
