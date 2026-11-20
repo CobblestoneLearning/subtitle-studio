@@ -25,5 +25,159 @@
     "Translate captions with DeepL, Microsoft, Google or an AI service, then check them first."
   ],
   "owner": "Bryan Hurley",
-  "updated": "2026-11-20"
+  "updated": "2026-11-20",
+  "cover": "hub/cover.jpg",
+  "gallery": [
+    {
+      "src": "hub/gallery/01-edit.jpg",
+      "caption": "The video plays with its captions. You change the words and times of each caption in the list.",
+      "alt": "Subtitle Studio with a training video, a caption on the video, a list of captions and a timeline"
+    },
+    {
+      "src": "hub/gallery/02-speed.jpg",
+      "caption": "If the video is now faster or slower, use the Speed tab to change all the caption times to match.",
+      "alt": "The Speed tab set for a video that is 20 percent faster, with the calculated time factor"
+    },
+    {
+      "src": "hub/gallery/03-find.jpg",
+      "caption": "Find a word in all the captions, then replace one match or all of them.",
+      "alt": "The Find and Replace tab searching for the word load, with 7 matches and the first match selected"
+    },
+    {
+      "src": "hub/gallery/04-translate.jpg",
+      "caption": "The Translate tab sends the captions to the translation service that you choose. You add your own key.",
+      "alt": "The Translate tab with Microsoft Translator selected, Irish as the target language and an empty key field"
+    }
+  ],
+  "guides": [
+    {
+      "title": "Move all the captions later or earlier",
+      "for": "course builders",
+      "steps": [
+        {
+          "text": "To open your subtitle file, select **Open subtitles**.",
+          "image": "hub/guides/move-all-captions/01.jpg",
+          "marks": [
+            {
+              "kind": "step",
+              "x": 6.7,
+              "y": 0.94,
+              "w": 7.63,
+              "h": 9.39,
+              "n": "1",
+              "label": "Open subtitles"
+            }
+          ]
+        },
+        {
+          "text": "On the **Timing** tab, type the time in **Amount**. A minus number moves the captions earlier.",
+          "image": "hub/guides/move-all-captions/02.jpg",
+          "marks": [
+            {
+              "kind": "focus",
+              "x": 0,
+              "y": 6.34,
+              "w": 10.65,
+              "h": 18.85,
+              "label": "Timing"
+            },
+            {
+              "kind": "step",
+              "x": 1.47,
+              "y": 49.82,
+              "w": 77.8,
+              "h": 17.62,
+              "n": "2",
+              "label": "Amount"
+            }
+          ]
+        },
+        {
+          "text": "In **Unit**, select **ms** for milliseconds or **sec** for seconds.",
+          "image": "hub/guides/move-all-captions/03.jpg",
+          "marks": [
+            {
+              "kind": "step",
+              "x": 79.28,
+              "y": 49.38,
+              "w": 17.24,
+              "h": 18.67,
+              "n": "3",
+              "label": "Unit"
+            }
+          ]
+        },
+        {
+          "text": "Select **Shift all**. To move only the captions that you selected, select **Shift selected**.",
+          "image": "hub/guides/move-all-captions/04.jpg",
+          "marks": [
+            {
+              "kind": "step",
+              "x": 1.47,
+              "y": 68.93,
+              "w": 11.59,
+              "h": 17.78,
+              "n": "4",
+              "label": "Shift all"
+            },
+            {
+              "kind": "alt",
+              "x": 13.03,
+              "y": 68.93,
+              "w": 17.17,
+              "h": 17.78,
+              "label": "Shift selected"
+            }
+          ]
+        },
+        {
+          "text": "Check the new times in the **Start** and **End** columns.",
+          "image": "hub/guides/move-all-captions/05.jpg",
+          "marks": [
+            {
+              "kind": "area",
+              "x": 7.33,
+              "y": 12.01,
+              "w": 12.07,
+              "h": 9.05,
+              "n": "A",
+              "label": "Start"
+            },
+            {
+              "kind": "area",
+              "x": 18.97,
+              "y": 12.01,
+              "w": 12.07,
+              "h": 9.05,
+              "n": "B",
+              "label": "End"
+            }
+          ]
+        },
+        {
+          "text": "Select **Export .vtt** to download the file. For a SubRip (.srt) file, select **Export .srt**.",
+          "image": "hub/guides/move-all-captions/06.jpg",
+          "marks": [
+            {
+              "kind": "step",
+              "x": 78.05,
+              "y": 1.43,
+              "w": 10.27,
+              "h": 14.29,
+              "n": "6",
+              "label": "Export .vtt"
+            },
+            {
+              "kind": "alt",
+              "x": 88.55,
+              "y": 1.43,
+              "w": 10.39,
+              "h": 14.29,
+              "label": "Export .srt"
+            }
+          ]
+        }
+      ]
+    }
+  ]
 }
