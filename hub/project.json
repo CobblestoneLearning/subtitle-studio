@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "name": "Subtitle Studio",
+  "tagline": "Edits and translates video subtitle files in your web browser, so captions line up with the video.",
+  "summary": "A subtitle editor in one web page, for WebVTT (.vtt) and SubRip (.srt) caption files. It is a public page on GitHub, with nothing to install. Files stay on your computer unless you choose to translate.",
+  "purpose": "translation",
+  "kind": "app",
+  "helps": [
+    "course builders",
+    "our team"
+  ],
+  "works_with": [
+    "DeepL",
+    "Microsoft Translator",
+    "Google Translate",
+    "LibreTranslate"
+  ],
+  "runs_on": [],
+  "status": "live",
+  "features": [
+    "Edit caption text and timings, and add, split, merge or delete captions.",
+    "Watch the video with captions showing, to check their timing.",
+    "Shift or re-time captions in one go, including for sped-up videos.",
+    "Find and replace words across the file, or only in selected captions.",
+    "Translate captions with DeepL, Microsoft, Google or an AI service, then check them first."
+  ],
+  "owner": "Bryan Hurley",
+  "updated": "2026-11-20"
+}
