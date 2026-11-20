@@ -24,8 +24,7 @@
     "Find and replace words across the file, or only in selected captions.",
     "Translate captions with DeepL, Microsoft, Google or an AI service, then check them first."
   ],
-  "owner": "Bryan Hurley",
-  "updated": "2026-11-20",
+  "demo": "index.html",
   "cover": "hub/cover.jpg",
   "gallery": [
     {
@@ -179,5 +178,7 @@
         }
       ]
     }
-  ]
+  ],
+  "owner": "Bryan Hurley",
+  "updated": "2026-11-20"
 }
